@@ -89,16 +89,36 @@
 
 ## Next Steps
 
-### Phase 6: Cantus Firmus Generator (In Progress)
-- [ ] **3.1.1** Implement `check_range(voice_line, voice_range)` constraint
-- [ ] **3.1.2** Implement `check_leap_size(voice_line)` (max octave, prefer ≤5th)
-- [ ] **3.1.3** Implement `check_leap_compensation(voice_line)` (large leap → opposite step)
-- [ ] **3.1.4** Implement `check_step_preference(voice_line)` (≥60-70% stepwise)
-- [ ] **3.1.5** Implement `check_repeated_notes(voice_line)` (avoid long repetitions)
-- [ ] **3.1.6** Implement `check_melodic_climax(voice_line)` (single highest point)
-- [ ] **3.1.7** Implement `check_no_augmented_intervals(voice_line)` (no aug 2nd, etc.)
-- [ ] **3.1.8** Implement `check_no_melodic_tritones(voice_line)`
-- [ ] **3.1.9** Implement `check_start_end_degrees(voice_line, key)` (stable tonic)
+### Phase 6: Cantus Firmus Generator ✅
+
+#### CF Generation (6.1)
+- ✅ **6.1.1** `generate_cf_candidates(key, length, voice_range)`
+- ✅ **6.1.2** Apply CF-specific melodic rules (mostly stepwise, single climax)
+- ✅ **6.1.3** Score CF quality (prefer smooth contours)
+- ✅ **6.1.4** Backtracking for CF generation
+- ✅ **6.1.5** Randomization (seed-based for reproducibility)
+- ✅ **6.1.6** Handle timeout/max attempts (fail gracefully)
+
+**Test Status**: ✅ All CF generator tests passing (6 tests)
+
+---
+
+## Next Steps
+
+### Phase 7: First Species Counterpoint Generator ✅
+
+#### 2-Voice Generator (7.1)
+- ✅ **7.1.1** `generate_candidates(current_state, cf_note, species)`
+- ✅ **7.1.2** Filter candidates by range constraints
+- ✅ **7.1.3** Filter by melodic rules (step/leap from previous)
+- ✅ **7.1.4** Filter by vertical consonance with CF
+- ✅ **7.1.5** Filter by parallel/hidden perfect checks
+- ✅ **7.1.6** Greedy search algorithm with randomization
+- ✅ **7.1.7** Randomization to candidate order
+- ✅ **7.1.8** Cadence forcing (perfect consonance endings)
+- ✅ **7.1.9** `generate_first_species(problem)` main function
+
+**Test Status**: ✅ All first species generator tests passing (5 tests)
 
 ---
 
@@ -119,6 +139,8 @@
 - `melodic_rules.py` - Per-voice melodic constraints
 - `harmonic_rules.py` - Voice interaction constraints
 - `species_rules.py` - First species-specific rules
+- `cf_generator.py` - Cantus firmus generator
+- `first_species_generator.py` - First species counterpoint generator
 
 ### Tests (`backend/tests/`)
 - `test_models.py` - Unit tests for all data models (13 tests)
@@ -126,8 +148,10 @@
 - `test_melodic_rules.py` - Unit tests for melodic rules (17 tests)
 - `test_harmonic_rules.py` - Unit tests for harmonic rules (11 tests)
 - `test_species_rules.py` - Unit tests for first species rules (15 tests)
+- `test_cf_generator.py` - Unit tests for CF generator (6 tests)
+- `test_first_species_generator.py` - Unit tests for first species generator (5 tests)
 
-**Total: 67 tests, all passing**
+**Total: 78 tests, all passing**
 
 ### Application
 - `backend/app/main.py` - FastAPI application with health endpoint

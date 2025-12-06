@@ -35,6 +35,8 @@ from .species_rules import (
     FirstSpeciesValidator,
     evaluate_first_species,
 )
+from .cf_generator import generate_cantus_firmus
+from .first_species_generator import generate_first_species
 
 __all__ = [
     "calculate_interval",
@@ -65,4 +67,6 @@ __all__ = [
     "check_first_species_penultimate",
     "FirstSpeciesValidator",
     "evaluate_first_species",
+    "generate_cantus_firmus",
+    "generate_first_species",
 ]

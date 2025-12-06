@@ -21,9 +21,11 @@ This application generates and validates multi-voice counterpoint compositions (
 ✅ **Phase 3**: Melodic Rules Engine (9/9 complete)  
 ✅ **Phase 4**: Harmonic Rules Engine (5/5 complete)  
 ✅ **Phase 5**: Species-Specific Rules (6/6 complete)  
-🚧 **Phase 6**: Cantus Firmus Generator (0/6 complete)
+✅ **Phase 6**: Cantus Firmus Generator (6/6 complete)  
+✅ **Phase 7**: First Species Counterpoint Generator (9/9 complete)  
+🚧 **Phase 8**: REST API - First Species Only (0/7 complete)
 
-**Test Coverage**: 67 tests, all passing
+**Test Coverage**: 78 tests, all passing
 
 ## Quick Start
 
@@ -56,7 +58,13 @@ Docs available at: `http://localhost:8000/docs`
 
 ```bash
 cd backend
+source .venv/bin/activate
 python -m pytest tests/ -v
+```
+
+With coverage:
+```bash
+python -m pytest tests/ --cov=app --cov-report=term-missing
 ```
 
 ## Project Structure
@@ -76,7 +84,7 @@ backend/
 │   │   ├── melodic_rules.py  # Per-voice constraints
 │   │   └── harmonic_rules.py # Voice interactions
 │   └── main.py          # FastAPI application
-└── tests/               # Unit tests (52 tests)
+└── tests/               # Unit tests (78 tests)
 ```
 
 ## Features Implemented
@@ -148,13 +156,19 @@ See [PROGRESS.md](PROGRESS.md) for current progress tracking.
 All implemented features have comprehensive unit test coverage:
 
 - **Models**: 13 tests
-- **Intervals & Motion**: 11 tests  
+- **Intervals & Motion**: 11 tests
 - **Melodic Rules**: 17 tests
 - **Harmonic Rules**: 11 tests
 - **Species Rules**: 15 tests
+- **CF Generator**: 6 tests
+- **First Species Generator**: 5 tests
+
+**Total**: 78 tests passing on Python 3.12
 
 Run specific test suites:
 ```bash
+cd backend
+source .venv/bin/activate
 pytest tests/test_models.py -v
 pytest tests/test_intervals.py -v
 pytest tests/test_melodic_rules.py -v
@@ -164,8 +178,7 @@ pytest tests/test_species_rules.py -v
 
 ## Next Steps
 
-1. Build cantus firmus generator
-2. Build first species counterpoint generator
+1. Create REST API endpoints
 3. Create REST API endpoints
 4. Build React frontend
 5. Add notation display (VexFlow)
