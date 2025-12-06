@@ -4,14 +4,21 @@ Species Counterpoint Generator - FastAPI Application
 Main application entry point for the counterpoint generation API.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
+import time
+import logging
 from dotenv import load_dotenv
+from app.api.routes import router as api_router
 
 # Load environment variables
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -41,6 +48,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {duration:.3f}s")
+    return response
+
+# Include API routes
+app.include_router(api_router, prefix="/api", tags=["counterpoint"])
 
 
 @app.get("/health")

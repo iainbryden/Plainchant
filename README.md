@@ -23,9 +23,9 @@ This application generates and validates multi-voice counterpoint compositions (
 ✅ **Phase 5**: Species-Specific Rules (6/6 complete)  
 ✅ **Phase 6**: Cantus Firmus Generator (6/6 complete)  
 ✅ **Phase 7**: First Species Counterpoint Generator (9/9 complete)  
-🚧 **Phase 8**: REST API - First Species Only (0/7 complete)
+✅ **Phase 8**: REST API - First Species Only (7/7 complete)
 
-**Test Coverage**: 78 tests, all passing
+**Test Coverage**: 84 tests, all passing
 
 ## Quick Start
 
@@ -84,7 +84,7 @@ backend/
 │   │   ├── melodic_rules.py  # Per-voice constraints
 │   │   └── harmonic_rules.py # Voice interactions
 │   └── main.py          # FastAPI application
-└── tests/               # Unit tests (78 tests)
+└── tests/               # Unit tests (84 tests)
 ```
 
 ## Features Implemented
@@ -136,7 +136,52 @@ backend/
 GET /health
 ```
 
-Returns service status and version.
+### Generate Cantus Firmus
+```http
+POST /api/generate-cantus-firmus
+```
+
+Request body:
+```json
+{
+  "tonic": 0,
+  "mode": "ionian",
+  "length": 8,
+  "voice_range": "soprano",
+  "seed": 42
+}
+```
+
+### Generate Counterpoint
+```http
+POST /api/generate-counterpoint
+```
+
+Request body:
+```json
+{
+  "tonic": 0,
+  "mode": "ionian",
+  "cf_notes": [60, 62, 64, 65, 67, 69, 71, 72],
+  "cf_voice_range": "alto",
+  "seed": 42
+}
+```
+
+### Evaluate Counterpoint
+```http
+POST /api/evaluate-counterpoint
+```
+
+Request body:
+```json
+{
+  "tonic": 0,
+  "mode": "ionian",
+  "cf_notes": [60, 62, 64, 65, 67, 69, 71, 72],
+  "cp_notes": [67, 69, 71, 72, 74, 76, 77, 79]
+}
+```
 
 ## Development
 
@@ -162,8 +207,9 @@ All implemented features have comprehensive unit test coverage:
 - **Species Rules**: 15 tests
 - **CF Generator**: 6 tests
 - **First Species Generator**: 5 tests
+- **API Endpoints**: 6 tests
 
-**Total**: 78 tests passing on Python 3.12
+**Total**: 84 tests passing on Python 3.12
 
 Run specific test suites:
 ```bash
@@ -178,7 +224,7 @@ pytest tests/test_species_rules.py -v
 
 ## Next Steps
 
-1. Create REST API endpoints
+1. Build React frontend
 3. Create REST API endpoints
 4. Build React frontend
 5. Add notation display (VexFlow)
