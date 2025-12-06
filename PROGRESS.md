@@ -73,11 +73,23 @@
 
 **Test Status**: ✅ All harmonic rule tests passing (11 tests)
 
+### Phase 5: Species-Specific Rules (First Species Only) ✅
+
+#### First Species Implementation (5.1)
+- ✅ **5.1.1** `check_first_species_consonances(cantus, counterpoint)` (all consonant)
+- ✅ **5.1.2** `check_first_species_start(cantus, counterpoint)` (P1, P5, P8)
+- ✅ **5.1.3** `check_first_species_end(cantus, counterpoint)` (P1 or P8)
+- ✅ **5.1.4** `check_first_species_penultimate(cantus, counterpoint)` (6-8 or 3-1)
+- ✅ **5.1.5** `FirstSpeciesValidator` class combining all checks
+- ✅ **5.1.6** `evaluate_first_species(problem)` → list of violations
+
+**Test Status**: ✅ All first species tests passing (15 tests)
+
 ---
 
 ## Next Steps
 
-### Phase 5: Species-Specific Rules (First Species Only) (In Progress)
+### Phase 6: Cantus Firmus Generator (In Progress)
 - [ ] **3.1.1** Implement `check_range(voice_line, voice_range)` constraint
 - [ ] **3.1.2** Implement `check_leap_size(voice_line)` (max octave, prefer ≤5th)
 - [ ] **3.1.3** Implement `check_leap_compensation(voice_line)` (large leap → opposite step)
@@ -106,14 +118,16 @@
 - `motion.py` - Motion type detection
 - `melodic_rules.py` - Per-voice melodic constraints
 - `harmonic_rules.py` - Voice interaction constraints
+- `species_rules.py` - First species-specific rules
 
 ### Tests (`backend/tests/`)
 - `test_models.py` - Unit tests for all data models (13 tests)
 - `test_intervals.py` - Unit tests for intervals and motion (11 tests)
 - `test_melodic_rules.py` - Unit tests for melodic rules (17 tests)
 - `test_harmonic_rules.py` - Unit tests for harmonic rules (11 tests)
+- `test_species_rules.py` - Unit tests for first species rules (15 tests)
 
-**Total: 52 tests, all passing**
+**Total: 67 tests, all passing**
 
 ### Application
 - `backend/app/main.py` - FastAPI application with health endpoint

@@ -27,6 +27,14 @@ from .harmonic_rules import (
     check_voice_overlap,
     check_spacing,
 )
+from .species_rules import (
+    check_first_species_consonances,
+    check_first_species_start,
+    check_first_species_end,
+    check_first_species_penultimate,
+    FirstSpeciesValidator,
+    evaluate_first_species,
+)
 
 __all__ = [
     "calculate_interval",
@@ -51,4 +59,10 @@ __all__ = [
     "check_voice_crossing",
     "check_voice_overlap",
     "check_spacing",
+    "check_first_species_consonances",
+    "check_first_species_start",
+    "check_first_species_end",
+    "check_first_species_penultimate",
+    "FirstSpeciesValidator",
+    "evaluate_first_species",
 ]

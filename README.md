@@ -20,9 +20,10 @@ This application generates and validates multi-voice counterpoint compositions (
 ✅ **Phase 2**: Musical Theory Engine (7/7 complete)  
 ✅ **Phase 3**: Melodic Rules Engine (9/9 complete)  
 ✅ **Phase 4**: Harmonic Rules Engine (5/5 complete)  
-🚧 **Phase 5**: Species-Specific Rules (0/6 complete)
+✅ **Phase 5**: Species-Specific Rules (6/6 complete)  
+🚧 **Phase 6**: Cantus Firmus Generator (0/6 complete)
 
-**Test Coverage**: 52 tests, all passing
+**Test Coverage**: 67 tests, all passing
 
 ## Quick Start
 
@@ -113,6 +114,13 @@ backend/
 - Voice overlap detection
 - Reasonable spacing between voices
 
+### First Species Rules
+- All intervals must be consonant
+- Start with perfect consonance (P1, P5, P8)
+- End with unison or octave
+- Penultimate cadence (6-8 or 3-1)
+- Complete validator for first species counterpoint
+
 ## API Endpoints
 
 ### Health Check
@@ -143,6 +151,7 @@ All implemented features have comprehensive unit test coverage:
 - **Intervals & Motion**: 11 tests  
 - **Melodic Rules**: 17 tests
 - **Harmonic Rules**: 11 tests
+- **Species Rules**: 15 tests
 
 Run specific test suites:
 ```bash
@@ -150,17 +159,17 @@ pytest tests/test_models.py -v
 pytest tests/test_intervals.py -v
 pytest tests/test_melodic_rules.py -v
 pytest tests/test_harmonic_rules.py -v
+pytest tests/test_species_rules.py -v
 ```
 
 ## Next Steps
 
-1. Implement first species-specific rules
-2. Build cantus firmus generator
-3. Build first species counterpoint generator
-4. Create REST API endpoints
-5. Build React frontend
-6. Add notation display (VexFlow)
-7. Add audio playback (Tone.js)
+1. Build cantus firmus generator
+2. Build first species counterpoint generator
+3. Create REST API endpoints
+4. Build React frontend
+5. Add notation display (VexFlow)
+6. Add audio playback (Tone.js)
 
 ## License
 
