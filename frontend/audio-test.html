@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audio Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+  <h1>Tone.js Audio Test</h1>
+  <button id="testBtn">Play C4 Note</button>
+  <button id="scaleBtn">Play C Major Scale</button>
+  <p id="status">Click a button to test audio</p>
+
+  <script>
+    const synth = new Tone.Synth().toDestination();
+    
+    document.getElementById('testBtn').addEventListener('click', async () => {
+      await Tone.start();
+      document.getElementById('status').textContent = 'Playing C4...';
+      synth.triggerAttackRelease('C4', '1n');
+      setTimeout(() => {
+        document.getElementById('status').textContent = 'Done! Did you hear it?';
+      }, 1000);
+    });
+
+    document.getElementById('scaleBtn').addEventListener('click', async () => {
+      await Tone.start();
+      document.getElementById('status').textContent = 'Playing scale...';
+      const notes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+      const now = Tone.now();
+      notes.forEach((note, i) => {
+        synth.triggerAttackRelease(note, '0.5', now + i * 0.5);
+      });
+      setTimeout(() => {
+        document.getElementById('status').textContent = 'Done! Did you hear the scale?';
+      }, 4500);
+    });
+  </script>
+</body>
+</html>
