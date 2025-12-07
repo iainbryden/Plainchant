@@ -22,7 +22,17 @@ class VoiceRange(str, Enum):
     BASS = "bass"
     
     def get_range(self) -> tuple[int, int]:
-        """Get MIDI range (min, max) for this voice."""
+        """Get extended MIDI range (min, max) for this voice including 'sometimes' notes."""
+        ranges = {
+            VoiceRange.SOPRANO: (58, 81),   # A#3 to A5 (extended from C4-G5)
+            VoiceRange.ALTO: (53, 77),      # F3 to F5 (extended from G3-D5)
+            VoiceRange.TENOR: (46, 69),     # A#2 to A4 (extended from C3-G4)
+            VoiceRange.BASS: (38, 62),      # D2 to D4 (extended from E2-C4)
+        }
+        return ranges[self]
+    
+    def get_core_range(self) -> tuple[int, int]:
+        """Get core MIDI range (min, max) - notes that should be used most often."""
         ranges = {
             VoiceRange.SOPRANO: (60, 79),   # C4 to G5
             VoiceRange.ALTO: (55, 74),      # G3 to D5
@@ -30,6 +40,11 @@ class VoiceRange(str, Enum):
             VoiceRange.BASS: (40, 60),      # E2 to C4
         }
         return ranges[self]
+    
+    def is_extended_note(self, midi: int) -> bool:
+        """Check if a MIDI note is in the extended range (not core range)."""
+        core_min, core_max = self.get_core_range()
+        return midi < core_min or midi > core_max
 
 
 class VoiceLine(BaseModel):

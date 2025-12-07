@@ -55,12 +55,14 @@ class GenerateMultiVoiceRequest(BaseModel):
     cf_notes: list[int] = Field(description="CF as MIDI numbers")
     cf_voice_range: VoiceRange
     num_voices: int = Field(ge=3, le=4, description="Total voices including CF (3 or 4)")
+    use_bass: bool = Field(default=False, description="For 3 voices, use SAB instead of SAT")
     seed: int | None = None
 
 
 class GenerateMultiVoiceResponse(BaseModel):
     voices: list[dict] = Field(description="List of voices with notes and range")
     num_voices: int
+    violations: list[dict] = Field(default_factory=list, description="Rule violations")
 
 
 class GenerateSecondSpeciesRequest(BaseModel):
@@ -328,6 +330,7 @@ async def generate_fifth_species_endpoint(request: GenerateFifthSpeciesRequest):
 async def generate_multi_voice_endpoint(request: GenerateMultiVoiceRequest):
     """Generate 3-4 voice first species counterpoint."""
     from app.models import Pitch, Note, Duration, VoiceLine
+    from app.services.multi_voice_rules import evaluate_multi_voice
     
     key = Key(tonic=request.tonic, mode=request.mode)
     
@@ -345,15 +348,16 @@ async def generate_multi_voice_endpoint(request: GenerateMultiVoiceRequest):
     solution = generate_multi_voice_first_species(
         problem,
         num_voices=request.num_voices,
-        seed=request.seed
+        seed=request.seed,
+        use_bass=request.use_bass
     )
     
     if not solution:
         raise HTTPException(status_code=500, detail="Failed to generate multi-voice counterpoint")
     
-    # Ensure diagnostics field exists for logging
-    if not hasattr(solution, 'diagnostics') or solution.diagnostics is None:
-        solution.diagnostics = []
+    # Evaluate for violations
+    violations = evaluate_multi_voice(solution)
+    solution.diagnostics = violations
     
     try:
         logger.log_generation(solution, request.model_dump(), "generate-multi-voice")
@@ -364,7 +368,12 @@ async def generate_multi_voice_endpoint(request: GenerateMultiVoiceRequest):
         voices=[{
             "voice_index": v.voice_index,
             "voice_range": v.voice_range.value,
-            "notes": [{"midi": n.pitch.midi, "duration": n.duration.value} for n in v.notes]
+            "notes": [{"midi": n.pitch.midi, "duration": n.duration.value, "is_extended": v.voice_range.is_extended_note(n.pitch.midi)} for n in v.notes]
         } for v in solution.voice_lines],
-        num_voices=len(solution.voice_lines)
+        num_voices=len(solution.voice_lines),
+        violations=[{
+            "rule_code": v.rule_code,
+            "description": v.description,
+            "severity": v.severity.value
+        } for v in violations]
     )

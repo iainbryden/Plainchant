@@ -40,6 +40,7 @@ export interface GenerateMultiVoiceRequest {
   cf_notes: number[];
   cf_voice_range: VoiceRange;
   num_voices: number;
+  use_bass?: boolean;
   seed?: number;
 }
 

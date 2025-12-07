@@ -11,7 +11,8 @@ def generate_multi_voice_first_species(
     problem: CounterpointProblem,
     num_voices: int = 3,
     seed: Optional[int] = None,
-    max_attempts: int = 10000
+    max_attempts: int = 10000,
+    use_bass: bool = False
 ) -> Optional[CounterpointSolution]:
     """Generate 3-4 voice first species counterpoint.
     
@@ -20,6 +21,7 @@ def generate_multi_voice_first_species(
         num_voices: Total voices including CF (3 or 4)
         seed: Random seed for reproducibility
         max_attempts: Maximum generation attempts
+        use_bass: For 3 voices, use SAB instead of SAT (default False)
     
     Returns:
         CounterpointSolution with all voices or None if generation fails
@@ -33,26 +35,39 @@ def generate_multi_voice_first_species(
     cf = problem.cantus_firmus
     key = problem.key
     
-    # Determine voice ranges based on CF position
-    cf_avg = sum(n.pitch.midi for n in cf.notes) / len(cf.notes)
+    # Determine voice ranges based on CF voice_range
+    cf_range = cf.voice_range
     
     if num_voices == 3:
-        # 3 voices: typically SAT or ATB
-        if cf_avg < 55:  # CF is low (tenor/bass range)
-            ranges = [VoiceRange.SOPRANO, VoiceRange.ALTO]  # Add S, A above
-        elif cf_avg > 67:  # CF is high (soprano range)
-            ranges = [VoiceRange.ALTO, VoiceRange.TENOR]  # Add A, T below
-        else:  # CF is middle (alto range)
-            ranges = [VoiceRange.SOPRANO, VoiceRange.TENOR]  # Add S above, T below
+        if use_bass:
+            # 3 voices with bass: SAB or ATB combinations
+            if cf_range == VoiceRange.BASS:
+                ranges = [VoiceRange.SOPRANO, VoiceRange.ALTO]  # SAB
+            elif cf_range == VoiceRange.TENOR:
+                ranges = [VoiceRange.SOPRANO, VoiceRange.BASS]  # STB
+            elif cf_range == VoiceRange.ALTO:
+                ranges = [VoiceRange.SOPRANO, VoiceRange.BASS]  # SAB
+            else:  # SOPRANO
+                ranges = [VoiceRange.ALTO, VoiceRange.BASS]  # SAB
+        else:
+            # 3 voices default: SAT or ATB combinations
+            if cf_range == VoiceRange.BASS:
+                ranges = [VoiceRange.ALTO, VoiceRange.TENOR]  # ATB
+            elif cf_range == VoiceRange.TENOR:
+                ranges = [VoiceRange.SOPRANO, VoiceRange.ALTO]  # SAT
+            elif cf_range == VoiceRange.ALTO:
+                ranges = [VoiceRange.SOPRANO, VoiceRange.TENOR]  # SAT
+            else:  # SOPRANO
+                ranges = [VoiceRange.ALTO, VoiceRange.TENOR]  # SAT
     else:  # 4 voices (SATB)
-        if cf_avg < 55:  # CF is bass
-            ranges = [VoiceRange.SOPRANO, VoiceRange.ALTO, VoiceRange.TENOR]
-        elif cf_avg > 67:  # CF is soprano
-            ranges = [VoiceRange.ALTO, VoiceRange.TENOR, VoiceRange.BASS]
-        elif cf_avg < 62:  # CF is tenor
-            ranges = [VoiceRange.SOPRANO, VoiceRange.ALTO, VoiceRange.BASS]
-        else:  # CF is alto
+        if cf_range == VoiceRange.BASS:
+            ranges = [VoiceRange.TENOR, VoiceRange.ALTO, VoiceRange.SOPRANO]
+        elif cf_range == VoiceRange.TENOR:
+            ranges = [VoiceRange.BASS, VoiceRange.ALTO, VoiceRange.SOPRANO]
+        elif cf_range == VoiceRange.ALTO:
             ranges = [VoiceRange.SOPRANO, VoiceRange.TENOR, VoiceRange.BASS]
+        else:  # SOPRANO
+            ranges = [VoiceRange.ALTO, VoiceRange.TENOR, VoiceRange.BASS]
     
     for _ in range(max_attempts):
         voices = _generate_all_voices(cf, key, ranges)
@@ -68,6 +83,8 @@ def _generate_all_voices(
     ranges: list[VoiceRange]
 ) -> Optional[list[VoiceLine]]:
     """Generate all counterpoint voices sequentially with retry."""
+    from .melodic_rules import check_step_preference
+    
     voices = [cf]
     scale_degrees = key.get_scale_degrees()
     
@@ -78,8 +95,11 @@ def _generate_all_voices(
         for retry in range(max_retries):
             notes = _generate_voice(voices, key, voice_range, voice_idx, scale_degrees)
             if notes and len(notes) == len(cf.notes):
-                voices.append(VoiceLine(notes=notes, voice_index=voice_idx, voice_range=voice_range))
-                break
+                voice_line = VoiceLine(notes=notes, voice_index=voice_idx, voice_range=voice_range)
+                # Validate melodic rules (must have ≥60% stepwise motion)
+                if not check_step_preference(voice_line):
+                    voices.append(voice_line)
+                    break
         else:
             return None
     
@@ -136,9 +156,13 @@ def _get_multi_start_candidates(
         if midi % 12 not in scale_degrees:
             continue
         
-        # Check consonance with all existing voices
+        # Check consonance with all existing voices and avoid exact unisons
         valid = True
         for voice in existing_voices:
+            # Avoid starting on exact same note (unison)
+            if voice.notes[idx].pitch.midi == midi:
+                valid = False
+                break
             interval = calculate_interval(voice.notes[idx].pitch, Pitch.from_midi(midi))
             if not is_consonant(interval):
                 valid = False
@@ -192,7 +216,6 @@ def _get_multi_end_candidates(
             continue
         
         # Check parallel perfects (strict for octaves/unisons, relaxed for fifths)
-        has_parallel_leap = False
         for voice in existing_voices:
             prev_vert = calculate_interval(voice.notes[idx - 1].pitch, prev_note.pitch)
             curr_vert = calculate_interval(voice.notes[idx].pitch, Pitch.from_midi(midi))
@@ -203,22 +226,26 @@ def _get_multi_end_candidates(
                     prev_note.pitch, Pitch.from_midi(midi)
                 )
                 if motion == MotionType.PARALLEL:
-                    # NEVER allow parallel octaves/unisons
-                    if prev_vert % 12 == 0 and curr_vert % 12 == 0:
+                    prev_type = prev_vert % 12
+                    curr_type = curr_vert % 12
+                    # NEVER allow parallel octaves/unisons (same perfect type)
+                    if prev_type == 0 and curr_type == 0:
                         valid = False
                         break
-                    # For fifths, mark as less preferred if by leap
-                    voice_step = abs(voice.notes[idx].pitch.midi - voice.notes[idx - 1].pitch.midi)
-                    our_step = abs(midi - prev_midi)
-                    if voice_step > 2 or our_step > 2:
-                        has_parallel_leap = True
+                    # NEVER allow parallel fifths of same type
+                    if prev_type == 7 and curr_type == 7:
+                        valid = False
+                        break
+        
+        if not valid:
+            continue
         
         # Categorize by quality (prefer stepwise, allow small leaps)
         step_dist = abs(midi - prev_midi)
-        if step_dist <= 2 and not has_parallel_leap:
-            preferred.append(midi)  # Best: stepwise, no parallel leaps
-        elif step_dist <= 5 and not has_parallel_leap:
-            fallback.append(midi)  # OK: small leap (3rd/4th), no parallel leaps
+        if step_dist <= 2:
+            preferred.append(midi)  # Best: stepwise
+        elif step_dist <= 5:
+            fallback.append(midi)  # OK: small leap (3rd/4th)
         # Reject large leaps at cadence (>5 semitones)
     
     return preferred + fallback

@@ -59,6 +59,36 @@ export const generateMultiVoice = async (
   return response.data;
 };
 
+export const generateSecondSpecies = async (
+  params: GenerateCounterpointRequest
+): Promise<GenerateCounterpointResponse> => {
+  const response = await apiClient.post<GenerateCounterpointResponse>(
+    '/api/generate-second-species',
+    params
+  );
+  return response.data;
+};
+
+export const generateThirdSpecies = async (
+  params: GenerateCounterpointRequest
+): Promise<GenerateCounterpointResponse> => {
+  const response = await apiClient.post<GenerateCounterpointResponse>(
+    '/api/generate-third-species',
+    params
+  );
+  return response.data;
+};
+
+export const generateFifthSpecies = async (
+  params: GenerateCounterpointRequest
+): Promise<GenerateCounterpointResponse> => {
+  const response = await apiClient.post<GenerateCounterpointResponse>(
+    '/api/generate-fifth-species',
+    params
+  );
+  return response.data;
+};
+
 export const checkHealth = async (): Promise<{ status: string }> => {
   const response = await apiClient.get<{ status: string }>('/health');
   return response.data;

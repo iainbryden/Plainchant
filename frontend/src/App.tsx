@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { generateCantusFirmus, generateCounterpoint, evaluateCounterpoint, generateMultiVoice } from './services/apiClient';
+import { generateCantusFirmus, generateCounterpoint, evaluateCounterpoint, generateMultiVoice, generateSecondSpecies, generateThirdSpecies, generateFifthSpecies } from './services/apiClient';
 import { KeySelector } from './components/KeySelector';
 import { VoiceRangeSelector } from './components/VoiceRangeSelector';
 import { VoiceCountSelector } from './components/VoiceCountSelector';
+import { VoicingSelector } from './components/VoicingSelector';
+import { SpeciesSelector } from './components/SpeciesSelector';
 import { CantusFirmusControls } from './components/CantusFirmusControls';
 import { CounterpointControls } from './components/CounterpointControls';
 import { NoteList } from './components/NoteList';
@@ -10,18 +12,21 @@ import { ViolationsList } from './components/ViolationsList';
 import { ScoreRenderer } from './components/ScoreRenderer';
 import { PlaybackControls } from './components/PlaybackControls';
 import { audioEngine } from './utils/audioEngine';
-import type { Mode, VoiceRange, RuleViolation } from './types';
+import type { Mode, VoiceRange, RuleViolation, SpeciesType } from './types';
 import './App.css';
 
 function App() {
   const [tonic, setTonic] = useState(0);
   const [mode, setMode] = useState<Mode>('ionian');
   const [cfVoiceRange, setCfVoiceRange] = useState<VoiceRange>('alto');
+  const [species, setSpecies] = useState<SpeciesType>('first');
   
   const [cfNotes, setCfNotes] = useState<number[]>([]);
   const [cpNotes, setCpNotes] = useState<number[]>([]);
-  const [allVoices, setAllVoices] = useState<number[][]>([]);
+  const [allVoices, setAllVoices] = useState<any[][]>([]);
+  const [voiceRanges, setVoiceRanges] = useState<string[]>([]);
   const [voiceCount, setVoiceCount] = useState(2);
+  const [useBass, setUseBass] = useState(false);
   const [violations, setViolations] = useState<RuleViolation[]>([]);
   
   const [loadingCf, setLoadingCf] = useState(false);
@@ -53,23 +58,26 @@ function App() {
     
     try {
       if (voiceCount === 2) {
-        const result = await generateCounterpoint({
-          tonic,
-          mode,
-          cf_notes: cfNotes,
-          cf_voice_range: cfVoiceRange,
-          seed,
-        });
+        let result;
+        const params = { tonic, mode, cf_notes: cfNotes, cf_voice_range: cfVoiceRange, seed };
+        
+        switch (species) {
+          case 'second':
+            result = await generateSecondSpecies(params);
+            break;
+          case 'third':
+            result = await generateThirdSpecies(params);
+            break;
+          case 'fifth':
+            result = await generateFifthSpecies(params);
+            break;
+          default:
+            result = await generateCounterpoint(params);
+        }
+        
         setCpNotes(result.cp_notes.map((n: any) => n.midi));
         setAllVoices([]);
-        
-        const evalResult = await evaluateCounterpoint({
-          tonic,
-          mode,
-          cf_notes: cfNotes,
-          cp_notes: result.cp_notes.map((n: any) => n.midi),
-        });
-        setViolations(evalResult.violations);
+        setViolations(result.violations || []);
       } else {
         const result = await generateMultiVoice({
           tonic,
@@ -77,12 +85,15 @@ function App() {
           cf_notes: cfNotes,
           cf_voice_range: cfVoiceRange,
           num_voices: voiceCount,
+          use_bass: useBass,
           seed,
         });
-        const voices = result.voices.map(v => v.notes.map((n: any) => n.midi));
+        const voices = result.voices.map(v => v.notes);
+        const ranges = result.voices.map(v => v.voice_range);
         setAllVoices(voices);
+        setVoiceRanges(ranges);
         setCpNotes([]);
-        setViolations([]);
+        setViolations(result.violations || []);
       }
     } catch (err) {
       console.error('Failed to generate Counterpoint:', err);
@@ -106,6 +117,8 @@ function App() {
           <KeySelector tonic={tonic} mode={mode} onTonicChange={setTonic} onModeChange={setMode} />
           <VoiceRangeSelector value={cfVoiceRange} onChange={setCfVoiceRange} label="CF Voice" />
           <VoiceCountSelector value={voiceCount} onChange={setVoiceCount} disabled={loadingCf || loadingCp} />
+          {voiceCount === 3 && <VoicingSelector value={useBass} onChange={setUseBass} disabled={loadingCf || loadingCp} />}
+          {voiceCount === 2 && <SpeciesSelector value={species} onChange={setSpecies} disabled={loadingCf || loadingCp} />}
           <CantusFirmusControls onGenerate={handleGenerateCf} isLoading={loadingCf} />
           <CounterpointControls onGenerate={handleGenerateCp} isLoading={loadingCp} disabled={!cfNotes || cfNotes.length === 0} />
         </section>
@@ -115,6 +128,7 @@ function App() {
             cfNotes={cfNotes} 
             cpNotes={voiceCount === 2 ? cpNotes : []} 
             allVoices={allVoices}
+            voiceRanges={voiceRanges}
             tonic={tonic} 
             mode={mode}
             violationIndices={violations?.map(v => v.note_indices).flat() || []}
@@ -123,7 +137,8 @@ function App() {
             <PlaybackControls
               onPlay={async () => {
                 if (allVoices.length > 0) {
-                  await audioEngine.playMultipleVoices(allVoices, tempo);
+                  const midiVoices = allVoices.map(v => v.map((n: any) => typeof n === 'number' ? n : n.midi));
+                  await audioEngine.playMultipleVoices(midiVoices, tempo);
                 } else if (cpNotes && cpNotes.length > 0) {
                   await audioEngine.playTwoVoices(cpNotes, cfNotes, tempo);
                 } else {
@@ -138,7 +153,7 @@ function App() {
           )}
           {allVoices.length > 0 ? (
             allVoices.map((voice, idx) => (
-              <NoteList key={idx} notes={voice} label={`Voice ${idx + 1}`} />
+              <NoteList key={idx} notes={voice.map((n: any) => typeof n === 'number' ? n : n.midi)} label={`Voice ${idx + 1}`} />
             ))
           ) : (
             <>
@@ -146,7 +161,7 @@ function App() {
               <NoteList notes={cpNotes} label="Counterpoint" />
             </>
           )}
-          {cpNotes && cpNotes.length > 0 && <ViolationsList violations={violations} />}
+          {(cpNotes.length > 0 || allVoices.length > 0) && <ViolationsList violations={violations} />}
         </section>
       </main>
     </div>

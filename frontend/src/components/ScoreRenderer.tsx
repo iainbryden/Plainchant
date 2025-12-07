@@ -6,7 +6,8 @@ import type { Mode } from '../types';
 interface ScoreRendererProps {
   cfNotes: number[];
   cpNotes: number[];
-  allVoices?: number[][];
+  allVoices?: any[][];
+  voiceRanges?: string[];
   tonic: number;
   mode: Mode;
   violationIndices?: number[];
@@ -16,6 +17,7 @@ export const ScoreRenderer: React.FC<ScoreRendererProps> = ({
   cfNotes = [], 
   cpNotes = [], 
   allVoices = [],
+  voiceRanges = [],
   tonic, 
   mode,
   violationIndices = []
@@ -44,15 +46,38 @@ export const ScoreRenderer: React.FC<ScoreRendererProps> = ({
 
     try {
       if (allVoices.length > 0) {
+        // Sort voices by SATB order (S=0, A=1, T=2, B=3)
+        const satbOrder: Record<string, number> = { soprano: 0, alto: 1, tenor: 2, bass: 3 };
+        const voicesWithData = allVoices.map((voice, idx) => ({
+          voice,
+          range: voiceRanges[idx] || '',
+          order: satbOrder[voiceRanges[idx]?.toLowerCase()] ?? 99
+        }));
+        voicesWithData.sort((a, b) => a.order - b.order);
+        
         // Multi-voice rendering
-        allVoices.forEach((voice, idx) => {
+        voicesWithData.forEach((voiceData, idx) => {
+          const voice = voiceData.voice;
           const yPos = 40 + idx * 150;
           const stave = new Stave(10, yPos, width - 20);
-          const clef = determineClef(voice);
+          // Determine clef based on voice range
+          const rangeLower = voiceData.range.toLowerCase();
+          let clef = 'treble';
+          if (rangeLower === 'bass') clef = 'bass';
+          // Soprano, Alto, and Tenor all use treble clef (modern convention)
           stave.addClef(clef).addKeySignature(keySignature).addTimeSignature('4/4');
           stave.setContext(context).draw();
+          
+          // Add voice label (S/A/T/B)
+          if (voiceData.range) {
+            const label = voiceData.range.charAt(0).toUpperCase();
+            context.setFont('Arial', 16, 'bold');
+            context.fillText(label, 5, yPos + 35);
+          }
 
-          const staveNotes = voice.map((midi) => {
+          const staveNotes = voice.map((noteData, noteIdx) => {
+            const midi = typeof noteData === 'number' ? noteData : noteData.midi;
+            const isExtended = typeof noteData === 'object' && noteData.is_extended;
             const note = new StaveNote({
               keys: [midiToVexFlowNote(midi)],
               duration: 'w',
@@ -61,8 +86,13 @@ export const ScoreRenderer: React.FC<ScoreRendererProps> = ({
             if (noteName.includes('#')) {
               note.addModifier(new Accidental('#'), 0);
             }
+            if (isExtended) {
+              note.setStyle({ fillStyle: '#8B0000', strokeStyle: '#8B0000' });
+            }
             return note;
           });
+          
+          if (staveNotes.length === 0) return;
 
           const voiceObj = new Voice({ numBeats: voice.length * 4, beatValue: 4 });
           voiceObj.addTickables(staveNotes);

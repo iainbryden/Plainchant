@@ -30,6 +30,7 @@ class GenerationLogger:
             "voices": [
                 {
                     "voice_index": voice.voice_index,
+                    "voice_range": voice.voice_range.value,
                     "notes": [{"midi": note.pitch.midi, "duration": note.duration.value} for note in voice.notes]
                 }
                 for voice in solution.voice_lines
