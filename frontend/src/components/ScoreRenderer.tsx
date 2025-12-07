@@ -49,8 +49,7 @@ export const ScoreRenderer: React.FC<ScoreRendererProps> = ({
           const yPos = 40 + idx * 150;
           const stave = new Stave(10, yPos, width - 20);
           const clef = determineClef(voice);
-          stave.addClef(clef).addKeySignature(keySignature);
-          if (idx === 0) stave.addTimeSignature('4/4');
+          stave.addClef(clef).addKeySignature(keySignature).addTimeSignature('4/4');
           stave.setContext(context).draw();
 
           const staveNotes = voice.map((midi) => {

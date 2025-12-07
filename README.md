@@ -38,7 +38,7 @@ This application generates and validates multi-voice counterpoint compositions (
 
 **Test Coverage**: 122 backend tests passing, 4 skipped
 
-**Fully Functional**: Generate first, second, third, and fifth species counterpoint with 2-4 voices!
+**Fully Functional**: Generate first, second, third, and fifth species counterpoint with 2-3 voices! 4-voice generation is experimental and may occasionally fail (just regenerate).
 
 See [BACKEND_COMPLETE.md](Docs/BACKEND_COMPLETE.md) for backend summary.
 

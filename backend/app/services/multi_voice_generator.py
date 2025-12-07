@@ -11,7 +11,7 @@ def generate_multi_voice_first_species(
     problem: CounterpointProblem,
     num_voices: int = 3,
     seed: Optional[int] = None,
-    max_attempts: int = 5000
+    max_attempts: int = 10000
 ) -> Optional[CounterpointSolution]:
     """Generate 3-4 voice first species counterpoint.
     
@@ -67,15 +67,21 @@ def _generate_all_voices(
     key,
     ranges: list[VoiceRange]
 ) -> Optional[list[VoiceLine]]:
-    """Generate all counterpoint voices sequentially."""
+    """Generate all counterpoint voices sequentially with retry."""
     voices = [cf]
     scale_degrees = key.get_scale_degrees()
     
     for voice_idx, voice_range in enumerate(ranges, start=1):
-        notes = _generate_voice(voices, key, voice_range, voice_idx, scale_degrees)
-        if not notes or len(notes) != len(cf.notes):
+        # Try multiple times for the last voice (hardest to generate)
+        max_retries = 3 if voice_idx == len(ranges) else 1
+        
+        for retry in range(max_retries):
+            notes = _generate_voice(voices, key, voice_range, voice_idx, scale_degrees)
+            if notes and len(notes) == len(cf.notes):
+                voices.append(VoiceLine(notes=notes, voice_index=voice_idx, voice_range=voice_range))
+                break
+        else:
             return None
-        voices.append(VoiceLine(notes=notes, voice_index=voice_idx, voice_range=voice_range))
     
     return voices
 
@@ -161,7 +167,7 @@ def _get_multi_end_candidates(
 ) -> list[int]:
     """Get candidates for last note (tonic, consonant, stepwise, no repeat)."""
     preferred = []
-    candidates = []
+    fallback = []
     cf = existing_voices[0]
     prev_midi = prev_note.pitch.midi
     
@@ -185,7 +191,8 @@ def _get_multi_end_candidates(
         if not valid:
             continue
         
-        # Check no parallel perfects with any voice (relaxed for cadence)
+        # Check parallel perfects (strict for octaves/unisons, relaxed for fifths)
+        has_parallel_leap = False
         for voice in existing_voices:
             prev_vert = calculate_interval(voice.notes[idx - 1].pitch, prev_note.pitch)
             curr_vert = calculate_interval(voice.notes[idx].pitch, Pitch.from_midi(midi))
@@ -195,25 +202,26 @@ def _get_multi_end_candidates(
                     voice.notes[idx - 1].pitch, voice.notes[idx].pitch,
                     prev_note.pitch, Pitch.from_midi(midi)
                 )
-                # Allow parallel perfects at cadence if both approach by step
                 if motion == MotionType.PARALLEL:
-                    voice_step = abs(voice.notes[idx].pitch.midi - voice.notes[idx - 1].pitch.midi)
-                    our_step = abs(midi - prev_midi)
-                    if not (voice_step <= 2 and our_step <= 2):
+                    # NEVER allow parallel octaves/unisons
+                    if prev_vert % 12 == 0 and curr_vert % 12 == 0:
                         valid = False
                         break
+                    # For fifths, mark as less preferred if by leap
+                    voice_step = abs(voice.notes[idx].pitch.midi - voice.notes[idx - 1].pitch.midi)
+                    our_step = abs(midi - prev_midi)
+                    if voice_step > 2 or our_step > 2:
+                        has_parallel_leap = True
         
-        if not valid:
-            continue
-        
-        # Prefer stepwise approach
+        # Categorize by quality (prefer stepwise, allow small leaps)
         step_dist = abs(midi - prev_midi)
-        if step_dist <= 2:
-            preferred.append(midi)
-        elif step_dist <= 5:
-            candidates.append(midi)
+        if step_dist <= 2 and not has_parallel_leap:
+            preferred.append(midi)  # Best: stepwise, no parallel leaps
+        elif step_dist <= 5 and not has_parallel_leap:
+            fallback.append(midi)  # OK: small leap (3rd/4th), no parallel leaps
+        # Reject large leaps at cadence (>5 semitones)
     
-    return preferred + candidates
+    return preferred + fallback
 
 
 def _get_multi_candidates(
